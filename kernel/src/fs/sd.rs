@@ -32,7 +32,7 @@ extern "C" {
 pub fn wait_micros( time_us: u32 ) {
     use pi;
     // pi::timer::spin_sleep_us( time_us as u64 * 100  );
-    pi::timer::spin_sleep_us( ( (time_us * 10000) as u64 ) );
+    pi::timer::spin_sleep_us( ( (time_us as u64) * 1000 ) );
 }
 
 #[derive(Debug)]
@@ -51,7 +51,7 @@ pub struct Sd;
 impl Sd {
     /// Initializes the SD card controller and returns a handle to it.
     pub fn new() -> Result<Sd, Error> {
-        let ret = unsafe { sd_init() };
+        let ret :i32 = unsafe { sd_init() };
         match ret {
             0 => Ok( Sd {} ),
             -1 => Err( Error::Timeout ),
