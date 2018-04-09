@@ -42,7 +42,8 @@ pub extern "C" fn kmain() {
             Err(_) => {
                 // u.write_fmt( format_args!("bootloader retry...\n") ).unwrap();
             },
-            Ok(_) => {
+            Ok(x) => {
+                u.write_fmt( format_args!( "bytes of transfer: {}", x ) ).unwrap();
                 jump_to( BINARY_START );
             }
         }
