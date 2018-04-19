@@ -122,8 +122,17 @@ pub extern "C" fn kmain() {
     let mut gpio_16_out = pi::gpio::Gpio::new(16).into_output();
     gpio_16_out.set();
 
-    kprintln!( "starting shell.." );
+    // let exception_level = unsafe { aarch64::current_el() };
+
+    // kprintln!( "exceptional level: {}", exception_level );
+
+    loop {
+
+        unsafe { asm!("brk 2" :::: "volatile"); }
     
-    shell::shell( "~>", & FILE_SYSTEM );
+        kprintln!( "starting normal shell.." );
+        
+        shell::shell( "~>", & FILE_SYSTEM );
+    }
 
 }

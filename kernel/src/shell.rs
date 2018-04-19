@@ -51,7 +51,7 @@ impl<'a> Command<'a> {
 
 ///process and branch to specific command handlers
 fn flush_to_cmd<'b>( fs: & FileSystem,
-                        input: & str, fs_path: & mut PathBuf ) {
+                        input: & str, fs_path: & mut PathBuf ) -> bool /*should exit?*/ {
     let mut b = [ ""; 512 ];
     match Command::parse( input, & mut b[..] ) {
         Err( Error::Empty ) => {
@@ -76,13 +76,18 @@ fn flush_to_cmd<'b>( fs: & FileSystem,
                 },
                 "cat" => {
                     < cmds::CmdCat as cmds::ShellCmd >::execute( fs, fs_path, x.path(), &x.args.as_slice()[1..] );
-                },                
+                },
+                "exit" => {
+                    kprintln!("exiting..");
+                    return true
+                }
                 _ => {
                     kprintln!("unknown command");
                 },
             }
         },
     }
+    return false
 }
 
 fn shift_left( cursor: & mut usize, end: & mut usize, buf: & mut [u8] ) {
@@ -113,9 +118,8 @@ fn shift_left( cursor: & mut usize, end: & mut usize, buf: & mut [u8] ) {
     }
 }
 
-/// Starts a shell using `prefix` as the prefix for each line. This function
-/// never returns: it is perpetually in a shell loop.
-pub fn shell(prefix: &str, fs: & FileSystem ) -> ! {
+/// Starts a shell using `prefix` as the prefix for each line.
+pub fn shell(prefix: &str, fs: & FileSystem ) {
 
     use std::io::Read;
     use std::io::Write;
@@ -157,7 +161,10 @@ pub fn shell(prefix: &str, fs: & FileSystem ) -> ! {
                 kprintln!();
                 {
                     let s = str::from_utf8( & buf[0..idx_end] ).unwrap_or_default();
-                    flush_to_cmd( &FILE_SYSTEM, s, & mut fs_path );
+                    let should_exit = flush_to_cmd( &FILE_SYSTEM, s, & mut fs_path );
+                    if should_exit {
+                        return
+                    }
                 }
                 kprint!( "{}", prefix );
                 for i in 0..idx_end {

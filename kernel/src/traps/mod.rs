@@ -43,5 +43,38 @@ pub struct Info {
 /// the trap frame for the exception.
 #[no_mangle]
 pub extern fn handle_exception(info: Info, esr: u32, tf: &mut TrapFrame) {
-    unimplemented!("handle_exception")
+    use aarch64;
+    use shell;
+    use fs::FileSystem;
+    use FILE_SYSTEM;
+
+    match info.kind {
+        Kind::Synchronous => {
+
+            // for the cpase of synchronous instruction other than system calls such as brk,
+            // the CPU stores the address of instruction that generates the exception
+            // in ELR_EL1.
+            // Thus, to set address to the next instruction upon exception return, it is ELR_EL1 + 4
+            tf.ELR += 4;
+
+            //ESR_ELx is valid if it's a synchronous exception
+            let syndrome = Syndrome::from( esr );
+            match syndrome {
+                Syndrome::Brk(x) => {
+                    
+                    kprintln!( "exception: brk: {:?}", x );
+                    
+                    //start a shell
+                    // kprintln!( "starting brk shell.." );
+                    
+                    shell::shell( "!>", & FILE_SYSTEM );
+
+                    //start a shell
+                    kprintln!( "exiting exception handler.." );
+                },
+                _ => {},
+            }       
+        },
+        _ => {},
+    }
 }

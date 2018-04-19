@@ -76,11 +76,16 @@ switch_to_el1:
 
     // set up exception handlers
     // FIXME: load `_vectors` addr into appropriate register (guide: 10.4)
-
+    ldr     x2, =_vectors
+    msr     VBAR_EL1, x2
+	
     // change execution level to EL1 (ref: C5.2.19)
     mov     x2, #0x3c5
     msr     SPSR_EL2, x2
     // FIXME: Return to EL1 at `set_stack`.
+    ldr     x2, =set_stack
+    msr     ELR_EL2, x2
+    eret
 
 set_stack:
     // set the current stack pointer
@@ -104,23 +109,162 @@ go_kmain:
     b       halt
 
 context_save:
-    // FIXME: Save the remaining context to the stack.
+
+    // save context(registers) to a "trap frame"
+
+    // layout format according to assignment 3 instructions
+	
+    //lr(x30), x0 are already saved to the stack by HANDLER, size = 16 bytes
+	
+    //r1-r29: 30 * 8 bytes = 240 bytes
+    str x29, [SP, #-16]! //extra 8 bytes padding for SP's 16 byte alignment
+    stp x27, x28, [SP, #-16]! //2 x 64bit = 2 x (8 x 8-bit) = 16 bytes
+    stp x25, x26, [SP, #-16]!
+    stp x23, x24, [SP, #-16]! 
+    stp x21, x22, [SP, #-16]!
+    stp x19, x20, [SP, #-16]!
+    stp x17, x18, [SP, #-16]!
+    stp x15, x16, [SP, #-16]!
+    stp x13, x14, [SP, #-16]!
+    stp x11, x12, [SP, #-16]!
+    stp x9, x10, [SP, #-16]!
+    stp x7, x8, [SP, #-16]!
+    stp x5, x6, [SP, #-16]!
+    stp x3, x4, [SP, #-16]!	
+    stp x1, x2, [SP, #-16]!
+	
+    // SIMD/FP registers q0-q31: 32 * 16 bytes = 512 bytes
+    stp q30, q31, [SP, #-32]! // 2 x 128bit = 2 x ( 16 bytes ) = 32 bytes
+    stp q28, q29, [SP, #-32]!
+    stp q26, q27, [SP, #-32]!
+    stp q24, q25, [SP, #-32]!
+    stp q22, q23, [SP, #-32]!
+    stp q20, q21, [SP, #-32]!
+    stp q18, q19, [SP, #-32]!
+    stp q16, q17, [SP, #-32]!
+    stp q14, q15, [SP, #-32]!
+    stp q12, q13, [SP, #-32]!
+    stp q10, q11, [SP, #-32]!
+    stp q8, q9, [SP, #-32]!
+    stp q6, q7, [SP, #-32]!
+    stp q4, q5, [SP, #-32]!
+    stp q2, q3, [SP, #-32]!
+    stp q0, q1, [SP, #-32]!
+
+    // other execution state registers:
+    //   ELR_ELx: preferred link register
+    //   PSTATE/SPSR_ELx: program state
+    //   SP/SP_ELs: stack pointer, exception source at level s
+    //   TPIDR_ELs: thread ID register, exception source at level s
+    //   PC: program counter ( store this later )
+    // note that the exception level is 1 and source exception level is 0
+    mrs x4, TPIDR_EL0
+    mrs x3, SP_EL0
+    mrs x2, SPSR_EL1
+    mrs x1, ELR_EL1
+    // size: 4 * 8 bytes = 32 bytes
+    stp x3, x4, [SP, #-16]!
+    stp x1, x2, [SP, #-16]!
+
+    //total size of the trap frame = 16 + 240 + 512 + 32 = 800
+
+    sub SP, SP, #16 //for calling nested function, handle_exception
+
+    // now load parameters for handle_exception function according to calling convention
+    // x0 already loaded by HANDLER
+    mrs x1, ESR_EL1 //exception syndrome register
+    add x2, SP, #16 //start of the trap frame
+
+    str x30, [SP]
+    bl handle_exception
+
+    ldr x30, [SP], #16
 
 .global context_restore
 context_restore:
-    // FIXME: Restore the context from the stack.
+
+    // Restore the context from the stack by doing the reverse
+
+    stp x1, x2, [SP], #16
+    stp x3, x4, [SP], #16
+    msr TPIDR_EL0, x4
+    msr SP_EL0, x3
+    msr SPSR_EL1, x2
+    msr ELR_EL1, x1
+
+    ldp q0, q1, [SP], #32
+    ldp q2, q3, [SP], #32
+    ldp q4, q5, [SP], #32
+    ldp q6, q7, [SP], #32
+    ldp q8, q9, [SP], #32
+    ldp q10, q11, [SP], #32
+    ldp q12, q13, [SP], #32
+    ldp q14, q15, [SP], #32
+    ldp q16, q17, [SP], #32
+    ldp q18, q19, [SP], #32
+    ldp q20, q21, [SP], #32
+    ldp q22, q23, [SP], #32
+    ldp q24, q25, [SP], #32
+    ldp q26, q27, [SP], #32
+    ldp q28, q29, [SP], #32
+    ldp q30, q31, [SP], #32
+
+    ldp x1, x2, [SP], #16
+    ldp x3, x4, [SP], #16	
+    ldp x5, x6, [SP], #16
+    ldp x7, x8, [SP], #16
+    ldp x9, x10, [SP], #16
+    ldp x11, x12, [SP], #16
+    ldp x13, x14, [SP], #16
+    ldp x15, x16, [SP], #16
+    ldp x17, x18, [SP], #16
+    ldp x19, x20, [SP], #16
+    ldp x21, x22, [SP], #16
+    ldp x23, x24, [SP], #16 
+    ldp x25, x26, [SP], #16
+    ldp x27, x28, [SP], #16
+    ldr x29, [SP], #16
 
     ret
 
+
+#define EXCEPT_SRC_SP_EL0 0
+#define EXCEPT_SRC_SP_ELX 1
+#define EXCEPT_SRC_LOWER_AARCH64 2
+#define EXCEPT_SRC_LOWER_AARCH32 3	
+
+#define EXCEPT_KIND_SYNCH 0
+#define EXCEPT_KIND_IRQ 1
+#define EXCEPT_KIND_FIQ 2
+#define EXCEPT_KIND_SERROR 3
+
+//allocates a contiguous stack space of 128 bytes (16 64-bit words) for each exception source-kind pair
+//for some reason lr register is not recognized, so use x30
 #define HANDLER(source, kind) \
     .align 7; \
-    stp     lr, x0, [SP, #-16]!; \
+    stp     x30, x0, [SP, #-16]!; \
     mov     x0, ##source; \
     movk    x0, ##kind, LSL #16; \
     bl      context_save; \
-    ldp     lr, x0, [SP], #16; \
+    ldp     x30, x0, [SP], #16; \
     eret
 
+//Setup the 16 exception vectors
 .align 11
 _vectors:
-    // FIXME: Setup the 16 exception vectors.
+    HANDLER( EXCEPT_SRC_SP_EL0, EXCEPT_KIND_SYNCH )
+    HANDLER( EXCEPT_SRC_SP_EL0, EXCEPT_KIND_IRQ )
+    HANDLER( EXCEPT_SRC_SP_EL0, EXCEPT_KIND_FIQ )
+    HANDLER( EXCEPT_SRC_SP_EL0, EXCEPT_KIND_SERROR )
+    HANDLER( EXCEPT_SRC_SP_ELX, EXCEPT_KIND_SYNCH )
+    HANDLER( EXCEPT_SRC_SP_ELX, EXCEPT_KIND_IRQ )
+    HANDLER( EXCEPT_SRC_SP_ELX, EXCEPT_KIND_FIQ )
+    HANDLER( EXCEPT_SRC_SP_ELX, EXCEPT_KIND_SERROR )
+    HANDLER( EXCEPT_SRC_LOWER_AARCH64, EXCEPT_KIND_SYNCH )
+    HANDLER( EXCEPT_SRC_LOWER_AARCH64, EXCEPT_KIND_IRQ )
+    HANDLER( EXCEPT_SRC_LOWER_AARCH64, EXCEPT_KIND_FIQ )
+    HANDLER( EXCEPT_SRC_LOWER_AARCH64, EXCEPT_KIND_SERROR )
+    HANDLER( EXCEPT_SRC_LOWER_AARCH32, EXCEPT_KIND_SYNCH )
+    HANDLER( EXCEPT_SRC_LOWER_AARCH32, EXCEPT_KIND_IRQ )
+    HANDLER( EXCEPT_SRC_LOWER_AARCH32, EXCEPT_KIND_FIQ )
+    HANDLER( EXCEPT_SRC_LOWER_AARCH32, EXCEPT_KIND_SERROR )
