@@ -53,8 +53,8 @@ pub extern fn handle_exception(info: Info, esr: u32, tf: &mut TrapFrame) {
 
             // for the cpase of synchronous instruction other than system calls such as brk,
             // the CPU stores the address of instruction that generates the exception
-            // in ELR_EL1.
-            // Thus, to set address to the next instruction upon exception return, it is ELR_EL1 + 4
+            // in ELR_ELx.
+            // Thus, to set address to the next instruction upon exception return, it is ELR_ELx + 4
             tf.ELR += 4;
 
             //ESR_ELx is valid if it's a synchronous exception
