@@ -115,7 +115,7 @@ context_save:
     // layout format according to assignment 3 instructions
 	
     //lr(x30), x0 are already saved to the stack by HANDLER, size = 16 bytes
-	
+
     //r1-r29: 30 * 8 bytes = 240 bytes
     str x29, [SP, #-16]! //extra 8 bytes padding for SP's 16 byte alignment
     stp x27, x28, [SP, #-16]! //2 x 64bit = 2 x (8 x 8-bit) = 16 bytes
@@ -166,19 +166,22 @@ context_save:
     stp x3, x4, [SP, #-16]!
     stp x1, x2, [SP, #-16]!
 
-    //total size of the trap frame = 16 + 240 + 512 + 32 = 800
+    //decreased stack pointer 784 bytes
 
-    sub SP, SP, #16 //for calling nested function, handle_exception
+    //total size of the trap frame = 16 + 240 + 512 + 32 = 800
 
     // now load parameters for handle_exception function according to calling convention
     // x0 already loaded by HANDLER
     mrs x1, ESR_EL1 //exception syndrome register
-    add x2, SP, #16 //start of the trap frame
+    mov x2, SP //start of the trap frame
 
-    str x30, [SP]
+    mov x19, x30 //save lr(x30) to a callee-save register x19
+    mov x20, SP //save SP
+
     bl handle_exception
 
-    ldr x30, [SP], #16
+    mov x30, x19 //restore lr(x30) in order to return to HANDLER later
+    mov SP, x20 //restore SP
 
 .global context_restore
 context_restore:
@@ -225,6 +228,9 @@ context_restore:
     ldp x27, x28, [SP], #16
     ldr x29, [SP], #16
 
+    //increased stack pointer 784 bytes
+
+    //return to HANDLER
     ret
 
 
