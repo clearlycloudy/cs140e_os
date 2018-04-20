@@ -131,7 +131,7 @@ pub extern "C" fn kmain() {
         let exception_level = unsafe { aarch64::current_el() };
         kprintln!( "exceptional level: {}", exception_level );
     }
-    unsafe { asm!("brk 4" :::: "volatile"); }
+    unsafe { asm!("svc 3" :::: "volatile"); }
     {
         let exception_level = unsafe { aarch64::current_el() };
         kprintln!( "exceptional level: {}", exception_level );

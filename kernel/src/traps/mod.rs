@@ -64,13 +64,13 @@ pub extern fn handle_exception(info: Info, esr: u32, tf: &mut TrapFrame) {
                     
                     kprintln!( "exception: brk: {:?}", x );
                     
-                    //start a shell
-                    // kprintln!( "starting brk shell.." );
+                    shell::shell( "!brk>", & FILE_SYSTEM );
+                },
+                Syndrome::Svc(x) => {
                     
-                    shell::shell( "!>", & FILE_SYSTEM );
-
-                    //start a shell
-                    kprintln!( "exiting exception handler.." );
+                    kprintln!( "exception: Svc: {:?}", x );
+                    
+                    shell::shell( "!svc>", & FILE_SYSTEM );
                 },
                 _ => {},
             }       

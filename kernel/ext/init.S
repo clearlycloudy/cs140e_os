@@ -156,7 +156,6 @@ context_save:
     //   PSTATE/SPSR_ELx: program state
     //   SP/SP_ELs: stack pointer, exception source at level s
     //   TPIDR_ELs: thread ID register, exception source at level s
-    //   PC: program counter ( store this later )
     // note that the exception level is 1 and source exception level is 0
     mrs x4, TPIDR_EL0
     mrs x3, SP_EL0
@@ -176,20 +175,18 @@ context_save:
     mov x2, SP //start of the trap frame
 
     mov x19, x30 //save lr(x30) to a callee-save register x19
-    mov x20, SP //save SP
 
     bl handle_exception
 
     mov x30, x19 //restore lr(x30) in order to return to HANDLER later
-    mov SP, x20 //restore SP
 
 .global context_restore
 context_restore:
 
     // Restore the context from the stack by doing the reverse
 
-    stp x1, x2, [SP], #16
-    stp x3, x4, [SP], #16
+    ldp x1, x2, [SP], #16
+    ldp  x3, x4, [SP], #16
     msr TPIDR_EL0, x4
     msr SP_EL0, x3
     msr SPSR_EL1, x2
