@@ -75,6 +75,9 @@ pub extern fn handle_exception(info: Info, esr: u32, tf: &mut TrapFrame) {
                 _ => {},
             }       
         },
+        Kind::Irq => {
+            //todo
+        }
         _ => {},
     }
 }

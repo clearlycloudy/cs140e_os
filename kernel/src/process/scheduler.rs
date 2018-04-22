@@ -105,22 +105,20 @@ impl Scheduler {
     /// It is the caller's responsibility to ensure that the first time `switch`
     /// is called, that process is executing on the CPU.
     fn add(&mut self, mut process: Process) -> Option<Id> {
-        let ig_generate = match self.last_id {
+        let id_generate = match self.last_id {
             None => 0,
             Some(x) => x + 1,
         };
 
-        if self.current.is_none() && ig_generate == 0 {
+        if self.current.is_none() && id_generate == 0 {
             self.current = Some( 0 );
         }
 
-        match process.is_ready() {
-            false => None,
-            _ => {
-                self.processes.push_back( process );
-                Some( ig_generate )
-            }
-        }
+        process.trap_frame.TPIDR = id_generate;
+
+        self.processes.push_back( process );
+
+        Some( id_generate )
     }
 
     /// Sets the current process's state to `new_state`, finds the next process
