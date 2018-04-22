@@ -227,7 +227,7 @@ context_restore:
 
     //increased stack pointer 784 bytes
 
-    //return to HANDLER
+    //return to HANDLER or first process initiliazation step
     ret
 
 

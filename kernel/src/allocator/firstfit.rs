@@ -12,7 +12,6 @@ pub struct Allocator {
     start: usize,
     end: usize,
     global_start: usize,
-    freelists: [ LinkedList; K ], //bins of 2^i for i in [1,K]
     global_freelist: LinkedList,
     global_busylist: LinkedList,
 }
@@ -23,10 +22,6 @@ impl Allocator {
     pub fn new(start: usize, end: usize) -> Allocator {
 
         use std::mem;
-        
-        // #[cfg(test)]
-        // println!( "bin initializing allocator start, end: {}, {}", start, end );
-//        let start_offset = align_up( start, 2 << (K-1) );
 
         let total = end - start;
         let alloc_bin = total / 2; //reserve half for binned freelists
@@ -37,34 +32,12 @@ impl Allocator {
 
         let mut offset = start;
 
-        //todo:
-        for i in 1..K {
-            //setup bins for current bin size
-            let s = 2 << i;
-
-            offset = align_up( offset, mem::size_of::<usize>() );
-
-            let n =  bin / s;
-            
-            for j in 0..n {
-                // println!("init memory addr for bin: {:#?}, size: {}", (offset +  j * s) as * mut usize, s );
-                unsafe { freelists[i-1].push( ( offset +  j * s ) as * mut usize ); }
-            }
-            offset += n * s;
-        }
-        
-        // #[cfg(test)]
-        // println!( "initializing freelist offset: {}", offset );
-
-        offset += mem::size_of::<usize>();
-
         let mut global_freelist = LinkedList::new();
         unsafe{ global_freelist.push( offset as * mut usize ); }
 
         let mut global_busylist = LinkedList::new();
 
         Self {
-            freelists: freelists,
             start: start,
             global_start: offset,
             end: end,
@@ -119,30 +92,6 @@ impl Allocator {
         // println!( "align_adj: {}", align_adj );
         // #[cfg(test)]
         // println!( "layout_size: {}", size_constraint );
-
-        //todo:
-        if layout.align() == mem::size_of::<usize>() &&
-            layout.size().count_zeros() == 1 &&
-            layout.size() < (2 << (K-1))
-        {
-            assert!( size_constraint.trailing_zeros() > 0 );
-            let idx_list = size_constraint.trailing_zeros() - 1;
-            
-            let mut freelist = self.freelists[ idx_list as usize ];
-            match freelist.pop() {
-                Some( x ) => {
-                    //found slot
-                    // #[cfg(test)]
-                    // println!( "allocate through bin: {:#?}", x );
-                    return Ok( x as * mut u8 )
-                },
-                None => {
-                    // #[cfg(test)]
-                    // println!( "allocate through global pool" );
-                    //try from global pool
-                }
-            }
-        }
         
         //First fit allocator
         //Allocate an extra pointer (to act as the header) plus the amount requested by the caller.
@@ -322,20 +271,6 @@ impl Allocator {
         };
 
         size_constraint = align_up( size_constraint, mem::size_of::<usize>() );
-
-        if (ptr as usize) < self.global_start {
-            for i in 1..K {
-                if size_constraint <= (2 << i) {
-                    //deallocate to this bin
-                    let idx_list = i - 1;
-                    let mut freelist = self.freelists[ idx_list ];
-                    unsafe { freelist.push( ptr as * mut usize ); }
-                    // #[cfg(test)]
-                    // println!( "deallocate through bins" );
-                    return ()
-                }
-            }
-        }
 
         // #[cfg(test)]
         // println!( "deallocate through global pool" );

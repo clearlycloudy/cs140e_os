@@ -37,7 +37,45 @@ impl GlobalScheduler {
     /// using timer interrupt based preemptive scheduling. This method should
     /// not return under normal conditions.
     pub fn start(&self) {
-        unimplemented!("GlobalScheduler::start()")
+        
+        use func_shell;
+
+        //first process setup
+        let mut trap_frame_ptr;
+        let p = match Process::new() {
+            Some( mut x) => {
+                //manually setup trap frame for the first process
+                x.trap_frame.ELR = func_shell as u64;
+                x.trap_frame.SP = x.stack.top().as_u64(); //SP to top of the process stack
+                x.trap_frame.SPSR = x.trap_frame.SPSR & !( ( ( 0b1111 as u64 ) << 6 ) ); //clear interrupt mask bits DAIF
+                trap_frame_ptr = x.trap_frame.clone();
+                x
+            },
+            _ => { panic!( "first process creation" ); },
+        };
+
+        let mut s = Scheduler::new();
+        *self.0.lock() = Some( s );
+        
+        match self.add( p ) {
+            Some( id ) => {},
+            _ => { panic!( "first process scheduling" ); },
+        };            
+
+        // skip continuing to HANDLER after context_restore because there isn't any other process
+        // context to be restored from the stack
+        // x0 and x30 should also be reset since it is not in context_restore
+        unsafe {
+            asm!("mov SP, $0
+                  bl context_restore
+                  ldr x0, =_start
+                  mov SP, x0
+                  mov x0, #0
+                  mov x30, #0
+                  eret" //jump back to EL0 at func_shell
+                 :: "r"(trap_frame_ptr)
+                 :: "volatile");
+        }
     }
 }
 
@@ -51,7 +89,11 @@ struct Scheduler {
 impl Scheduler {
     /// Returns a new `Scheduler` with an empty queue.
     fn new() -> Scheduler {
-        unimplemented!("Scheduler::new()")
+        Scheduler {
+            processes: VecDeque::new(),
+            current: None,
+            last_id: None,
+        }
     }
 
     /// Adds a process to the scheduler's queue and returns that process's ID if
@@ -63,7 +105,22 @@ impl Scheduler {
     /// It is the caller's responsibility to ensure that the first time `switch`
     /// is called, that process is executing on the CPU.
     fn add(&mut self, mut process: Process) -> Option<Id> {
-        unimplemented!("Scheduler::add()")
+        let ig_generate = match self.last_id {
+            None => 0,
+            Some(x) => x + 1,
+        };
+
+        if self.current.is_none() && ig_generate == 0 {
+            self.current = Some( 0 );
+        }
+
+        match process.is_ready() {
+            false => None,
+            _ => {
+                self.processes.push_back( process );
+                Some( ig_generate )
+            }
+        }
     }
 
     /// Sets the current process's state to `new_state`, finds the next process

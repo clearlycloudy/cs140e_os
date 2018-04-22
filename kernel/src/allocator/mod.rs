@@ -2,7 +2,8 @@ mod linked_list;
 mod util;
 
 // #[path = "bump.rs"]
-#[path = "bin.rs"]
+// #[path = "bin.rs"]
+#[path = "firstfit.rs"]
 mod imp;
 
 #[cfg(test)]

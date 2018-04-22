@@ -124,7 +124,7 @@ pub extern "C" fn kmain() {
     use std::iter;
     use fat32::traits::{ FileSystem, Entry, Dir, File };
 
-    check_gpio();
+    //check_gpio();
 
     pi::timer::spin_sleep_ms(3000);
 
@@ -146,5 +146,12 @@ pub extern "C" fn kmain() {
 #[no_mangle]
 #[cfg(not(test))]
 pub extern "C" fn func_shell() {
-    shell::shell( "~>", & FILE_SYSTEM );
+
+    //test context switches
+    unsafe{ asm!( "brk 1" :::: "volatile"); }
+    unsafe{ asm!( "brk 2" :::: "volatile"); }
+    shell::shell( "~0>", & FILE_SYSTEM );    
+    unsafe{ asm!( "brk 3" :::: "volatile"); }
+
+    loop{ shell::shell( "~1>", & FILE_SYSTEM ); }
 }
