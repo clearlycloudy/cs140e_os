@@ -5,8 +5,8 @@ use process::{Process, State, Id};
 use traps::TrapFrame;
 
 /// The `tick` time.
-// FIXME: When you're ready, change this to something more reasonable.
-pub const TICK: u32 = 2 * 1000 * 1000;
+
+pub const TICK: u32 = 1_000_000; //in microseconds
 
 /// Process scheduler for the entire machine.
 #[derive(Debug)]

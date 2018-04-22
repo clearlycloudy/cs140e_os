@@ -7,6 +7,8 @@ use pi::interrupt::{Controller, Interrupt};
 
 pub use self::trap_frame::TrapFrame;
 
+pub use self::syscall::syscall_sleep_ms;
+    
 use console::kprintln;
 use self::syndrome::Syndrome;
 use self::irq::handle_irq;
@@ -70,7 +72,7 @@ pub extern fn handle_exception(info: Info, esr: u32, tf: &mut TrapFrame) {
                     
                     kprintln!( "exception: Svc: {:?}", x );
                     
-                    shell::shell( "!svc>", & FILE_SYSTEM );
+                    handle_syscall( x, tf );
                 },
                 _ => {},
             }       

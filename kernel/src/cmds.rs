@@ -215,3 +215,27 @@ fn get_entry_from_path<'b>( fs: & fs::FileSystem, current_path: & path::PathBuf,
             Err(e) => { Err( e ) }
         }
 }
+
+///sleep command
+pub struct CmdSleep {}
+impl<'a, 'b> ShellCmd<'a,'b> for CmdSleep {
+    fn execute( fs: & fs::FileSystem, fs_path: & mut path::PathBuf, arg0: &'a str, args: &[ &'a str ] ) {
+        use std::str::FromStr;
+        use traps;
+        
+        let n = args.len();
+        if let Some(x) = args.iter().take(1).next() {
+            match u32::from_str(x) {
+                Ok(t_ms) => {
+                    let t_actual = traps::syscall_sleep_ms( t_ms );
+                    kprintln!( "actual sleep time: {} ms", t_actual );
+                },
+                _ => {
+                    kprintln!( "Err: expected format: sleep <t_ms>" );
+                }
+            }
+        } else {
+            kprintln!( "Err: expected format: sleep <t_ms>" );
+        }
+    }
+}

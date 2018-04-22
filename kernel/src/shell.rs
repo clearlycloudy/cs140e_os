@@ -77,10 +77,13 @@ fn flush_to_cmd<'b>( fs: & FileSystem,
                 "cat" => {
                     < cmds::CmdCat as cmds::ShellCmd >::execute( fs, fs_path, x.path(), &x.args.as_slice()[1..] );
                 },
+                "sleep" => {
+                    < cmds::CmdSleep as cmds::ShellCmd >::execute( fs, fs_path, x.path(), &x.args.as_slice()[1..] );      
+                },
                 "exit" => {
                     kprintln!("exiting..");
                     return true
-                }
+                },
                 _ => {
                     kprintln!("unknown command");
                 },
