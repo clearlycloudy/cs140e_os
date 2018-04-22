@@ -84,6 +84,14 @@ pub extern fn handle_exception(info: Info, esr: u32, tf: &mut TrapFrame) {
             if Controller::new().is_pending( Interrupt::Timer1 ) {
                 handle_irq( Interrupt::Timer1, tf );
             }
+            
+            if Controller::new().is_pending( Interrupt::Uart ) {
+                handle_irq( Interrupt::Uart, tf );
+            }
+
+            if Controller::new().is_pending( Interrupt::Usb ) {
+                handle_irq( Interrupt::Usb, tf );
+            }
         }
         _ => {},
     }

@@ -174,12 +174,12 @@ context_save:
     mrs x1, ESR_EL1 //exception syndrome register
     mov x2, SP //start of the trap frame
 
-    mov x19, x30 //save lr(x30) to a callee-save register x19
+    str x30, [SP, #-16]! //save lr(x30)
 
     bl handle_exception
 
-    mov x30, x19 //restore lr(x30) in order to return to HANDLER later
-
+    ldr x30, [SP], #16 //restore lr(x30) for original caller
+	
 .global context_restore
 context_restore:
 

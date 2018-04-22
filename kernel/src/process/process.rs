@@ -48,6 +48,26 @@ impl Process {
     ///
     /// Returns `false` in all other cases.
     pub fn is_ready(&mut self) -> bool {
-        unimplemented!();
+        
+        use std::mem;
+
+        let mut s = mem::replace( & mut self.state, State::Ready );
+
+        let is_ready = match s {
+            State::Ready => {
+                true
+            },
+            State::Waiting(ref mut poll_fn) => {
+                poll_fn( self )
+            },
+            _ => {
+                false
+            },
+        };
+
+        //swap back
+        mem::replace( & mut self.state, s );
+        
+        is_ready
     }
 }

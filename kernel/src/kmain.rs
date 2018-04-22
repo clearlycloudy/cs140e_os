@@ -155,3 +155,12 @@ pub extern "C" fn func_shell() {
 
     loop{ shell::shell( "~1>", & FILE_SYSTEM ); }
 }
+
+#[no_mangle]
+#[cfg(not(test))]
+pub extern "C" fn func_periodic_print() {
+    use console::kprintln;
+    loop{
+        kprintln!( "periodic print.." );
+    }
+}

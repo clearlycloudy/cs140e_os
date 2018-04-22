@@ -39,6 +39,7 @@ impl GlobalScheduler {
     pub fn start(&self) {
         
         use func_shell;
+        use func_periodic_print;
 
         //first process setup
         let mut trap_frame_ptr;
@@ -54,9 +55,31 @@ impl GlobalScheduler {
             _ => { panic!( "first process creation" ); },
         };
 
+        // //dummy process for testing context switch
+        let p2 = match Process::new() {
+            Some( mut x) => {
+                x.trap_frame.ELR = func_periodic_print as u64;
+                x.trap_frame.SP = x.stack.top().as_u64();
+                //x.trap_frame.SPSR = x.trap_frame.SPSR & !( ( ( 0b1111 as u64 ) << 6 ) );
+                x
+            },
+            _ => { panic!( "period print process creation" ); },
+        };
+
         let mut s = Scheduler::new();
         *self.0.lock() = Some( s );
 
+        use console::kprintln;
+        match self.add( p ) {
+            Some( id ) => { kprintln!("first process assigned id: {}", id ) },
+            _ => { panic!( "first process schedule add" ); },
+        };
+
+        match self.add( p2 ) {
+            Some( id ) => { kprintln!("period print process assigned id: {}", id ) },
+            _ => { panic!( "period print process schedule add" ); },
+        };
+        
         //enable timer 1 interrupt
         use pi::interrupt;
         interrupt::Controller::new().enable( interrupt::Interrupt::Timer1 );
@@ -64,11 +87,6 @@ impl GlobalScheduler {
         use pi::timer;
         timer::tick_in( TICK );
         
-        match self.add( p ) {
-            Some( id ) => {},
-            _ => { panic!( "first process scheduling" ); },
-        };            
-
         // skip continuing to HANDLER after context_restore because there isn't any other process
         // context to be restored from the stack
         // x0 and x30 should also be reset since it is not in context_restore
@@ -113,14 +131,12 @@ impl Scheduler {
     /// is called, that process is executing on the CPU.
     fn add(&mut self, mut process: Process) -> Option<Id> {
         let id_generate = match self.last_id {
-            None => 0,
-            Some(x) => x + 1,
+            None => 0, //intialization
+            Some(x) => x.wrapping_add( 1 ),
         };
 
-        if self.current.is_none() && id_generate == 0 {
-            self.current = Some( 0 );
-        }
-
+        self.last_id = Some(id_generate);
+        
         process.trap_frame.TPIDR = id_generate;
 
         self.processes.push_back( process );
@@ -137,6 +153,59 @@ impl Scheduler {
     /// This method blocks until there is a process to switch to, conserving
     /// energy as much as possible in the interim.
     fn switch(&mut self, new_state: State, tf: &mut TrapFrame) -> Option<Id> {
-        unimplemented!("Scheduler::switch()")
+        
+        //current process should at the front of the queue
+        match self.processes.pop_front() {
+            Some(mut x) => {
+
+                self.current = Some( x.trap_frame.TPIDR );
+                
+                x.state = new_state;
+                
+                x.trap_frame = Box::new( *tf ); //save current frame
+                
+                self.processes.push_back(x); //queue current process
+            },
+            None => { return None },  
+        }
+
+        //check on queued processes to find the next process
+        loop {
+            match self.processes.pop_front() {
+                Some(mut x) => {
+
+                    if x.is_ready() {
+
+                        self.current = Some( x.trap_frame.TPIDR );
+
+                        //get the frame of the process
+                        *tf = *x.trap_frame;
+                        
+                        x.state = State::Running;
+
+                        self.processes.push_front(x); //leave it in the front until the next interrupt
+
+                        return self.current
+
+                    } else {
+                        
+                        match self.current {
+                            Some(c) if c == x.trap_frame.TPIDR => {
+                                //sleep
+                                use aarch64;
+                                aarch64::wfi();
+                            },
+                            _ => {},
+                        }
+                        
+                        self.processes.push_back(x);
+                        //retry
+                    }
+                },
+                _ => {
+                    return None
+                },
+            }   
+        }
     }
 }

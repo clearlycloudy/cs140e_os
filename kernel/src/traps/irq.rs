@@ -10,7 +10,14 @@ pub fn handle_irq(interrupt: Interrupt, tf: &mut TrapFrame) {
             use pi::timer;
             use process::TICK;
             timer::Timer::new().tick_in( TICK );
+
+            //schedule processes
+            use SCHEDULER;
+            use process;
+            SCHEDULER.switch( process::State::Ready, tf );
         },
         _ => {},
     }
+    //enable interrupt again
+    tf.SPSR = tf.SPSR & !(1 << 7);
 }
