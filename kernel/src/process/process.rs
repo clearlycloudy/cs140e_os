@@ -65,12 +65,15 @@ impl Process {
             },
         };
 
-        if is_ready {
-            self.state = State::Ready;
-        } else {
-            //swap back
-            mem::replace( & mut self.state, s );
-        }
+        //swap back
+        mem::replace( & mut self.state, s );
+        // if is_ready {
+        //     self.state = State::Ready;
+        // } else {
+
+        //     self.state = s;
+
+        // }
         
         is_ready
     }

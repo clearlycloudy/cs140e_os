@@ -162,7 +162,7 @@ pub extern "C" fn func_periodic_print() {
     use console::kprintln;
     use traps;
     loop{
+        let t_actual = traps::syscall_sleep_ms( 7000 );
         kprintln!( "periodic print.." );
-        let t_actual = traps::syscall_sleep_ms( 5000 );
     }
 }

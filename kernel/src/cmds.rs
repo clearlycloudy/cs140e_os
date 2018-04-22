@@ -227,8 +227,9 @@ impl<'a, 'b> ShellCmd<'a,'b> for CmdSleep {
         if let Some(x) = args.iter().take(1).next() {
             match u32::from_str(x) {
                 Ok(t_ms) => {
-                    let t_actual = traps::syscall_sleep_ms( t_ms );
-                    kprintln!( "actual sleep time: {} ms", t_actual );
+                    kprintln!( "start sleep" );
+                    traps::syscall_sleep_ms( t_ms );
+                    kprintln!( "end sleep" );                  
                 },
                 _ => {
                     kprintln!( "Err: expected format: sleep <t_ms>" );

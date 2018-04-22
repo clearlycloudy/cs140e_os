@@ -6,7 +6,7 @@ use traps::TrapFrame;
 
 /// The `tick` time.
 
-pub const TICK: u32 = 1_000_000; //in microseconds
+pub const TICK: u32 = 1_000; //in microseconds
 
 /// Process scheduler for the entire machine.
 #[derive(Debug)]
