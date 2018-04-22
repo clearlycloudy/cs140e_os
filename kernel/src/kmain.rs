@@ -148,10 +148,10 @@ pub extern "C" fn kmain() {
 pub extern "C" fn func_shell() {
 
     //test context switches
-    unsafe{ asm!( "brk 1" :::: "volatile"); }
-    unsafe{ asm!( "brk 2" :::: "volatile"); }
-    shell::shell( "~0>", & FILE_SYSTEM );    
-    unsafe{ asm!( "brk 3" :::: "volatile"); }
+    // unsafe{ asm!( "brk 1" :::: "volatile"); }
+    // unsafe{ asm!( "brk 2" :::: "volatile"); }
+    // shell::shell( "~0>", & FILE_SYSTEM );    
+    // unsafe{ asm!( "brk 3" :::: "volatile"); }
 
     loop{ shell::shell( "~1>", & FILE_SYSTEM ); }
 }

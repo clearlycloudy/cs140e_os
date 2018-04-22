@@ -76,7 +76,14 @@ pub extern fn handle_exception(info: Info, esr: u32, tf: &mut TrapFrame) {
             }       
         },
         Kind::Irq => {
-            //todo
+
+            //forward interrupts such as ones coming from timers
+            
+            //kprintln!( "exception: irq: {:?}", info );
+
+            if Controller::new().is_pending( Interrupt::Timer1 ) {
+                handle_irq( Interrupt::Timer1, tf );
+            }
         }
         _ => {},
     }

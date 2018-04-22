@@ -56,6 +56,13 @@ impl GlobalScheduler {
 
         let mut s = Scheduler::new();
         *self.0.lock() = Some( s );
+
+        //enable timer 1 interrupt
+        use pi::interrupt;
+        interrupt::Controller::new().enable( interrupt::Interrupt::Timer1 );
+        //set timer interrupt value
+        use pi::timer;
+        timer::tick_in( TICK );
         
         match self.add( p ) {
             Some( id ) => {},
